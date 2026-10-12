@@ -36,36 +36,35 @@ pipeline {
 
         stage('Workspace Select') {
             steps {
-                script {
-                    sh """
-                        terraform workspace select ${params.ENVIRONMENT} || \
-                        terraform workspace new ${params.ENVIRONMENT}
-                    """
-                }
+                sh '''
+                    terraform workspace select "$ENVIRONMENT" ||
+                    terraform workspace new "$ENVIRONMENT"
+                '''
             }
         }
 
-       stage('Plan') {
-    steps {
-        withCredentials([
-            string(
-                credentialsId: 'aws-access-key-id',
-                variable: 'AWS_ACCESS_KEY_ID'
-            ),
-            string(
-                credentialsId: 'aws-secret-access-key',
-                variable: 'AWS_SECRET_ACCESS_KEY'
-            )
-        ]) {
-            sh '''
-                set +x
-                terraform plan \
-                  -var-file=dev.tfvars \
-                  -out=tfplan
-            '''
+        stage('Plan') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'aws-access-key-id',
+                        variable: 'AWS_ACCESS_KEY_ID'
+                    ),
+                    string(
+                        credentialsId: 'aws-secret-access-key',
+                        variable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+
+                        terraform plan \
+                            -var-file="${ENVIRONMENT}.tfvars" \
+                            -out=tfplan
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Approve') {
             steps {
@@ -89,7 +88,21 @@ pipeline {
 
         stage('Apply') {
             steps {
-                sh 'terraform apply -auto-approve tfplan'
+                withCredentials([
+                    string(
+                        credentialsId: 'aws-access-key-id',
+                        variable: 'AWS_ACCESS_KEY_ID'
+                    ),
+                    string(
+                        credentialsId: 'aws-secret-access-key',
+                        variable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+                        terraform apply -auto-approve tfplan
+                    '''
+                }
             }
         }
     }
