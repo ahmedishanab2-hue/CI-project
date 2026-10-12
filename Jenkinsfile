@@ -45,19 +45,27 @@ pipeline {
             }
         }
 
-        stage('Plan') {
-            steps {
-                script {
-                    def varFile = "${params.ENVIRONMENT}.tfvars"
-
-                    sh """
-                        terraform plan \
-                          -var-file=${varFile} \
-                          -out=tfplan
-                    """
-                }
-            }
+       stage('Plan') {
+    steps {
+        withCredentials([
+            string(
+                credentialsId: 'aws-access-key-id',
+                variable: 'AWS_ACCESS_KEY_ID'
+            ),
+            string(
+                credentialsId: 'aws-secret-access-key',
+                variable: 'AWS_SECRET_ACCESS_KEY'
+            )
+        ]) {
+            sh '''
+                set +x
+                terraform plan \
+                  -var-file=dev.tfvars \
+                  -out=tfplan
+            '''
         }
+    }
+}
 
         stage('Approve') {
             steps {
